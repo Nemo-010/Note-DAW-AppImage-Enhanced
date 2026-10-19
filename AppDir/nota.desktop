@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Nota
+Comment=Nota digital audio workstation
+Exec=Nota.App
+Icon=nota
+Categories=AudioVideo;Audio;
+Terminal=false
