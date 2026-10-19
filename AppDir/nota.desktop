@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Nota
+GenericName=Digital Audio Workstation
+Comment=Modern digital audio workstation
+Exec=Nota.App
+Icon=nota
+Terminal=false
+Categories=AudioVideo;Audio;Music;
+StartupWMClass=Nota.App
+X-AppImage-Name=Nota
+X-AppImage-Version=0.55.1
+X-AppImage-Arch=x86_64

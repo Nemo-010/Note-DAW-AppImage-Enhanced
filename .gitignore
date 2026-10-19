@@ -1,0 +1,15 @@
+/dist
+/AppDir/bin
+/AppDir/lib
+/AppDir/share
+/AppDir/shared
+/AppDir/etc
+/AppDir/sharun
+/AppDir/AppRun
+/AppDir/AppRun.lib
+/AppDir/AppRun.sh
+/AppDir/.env
+/AppDir/.DirIcon
+/nota-src
+/nota-publish
+/_test-app*
