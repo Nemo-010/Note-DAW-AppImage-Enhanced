@@ -11,7 +11,6 @@ pacman -Syu --noconfirm \
 	aspnet-targeting-pack-10.0 \
 	cmake              \
 	dotnet-sdk-10.0    \
-	git                \
 	libx11             \
 	libxcursor         \
 	libxext            \
