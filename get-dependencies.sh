@@ -69,5 +69,14 @@ dotnet publish ./nota-src/src/managed/Nota.App \
 # dlopen'd lazily only when tracing, would drag in liblttng-ust
 rm -f ./nota-publish/libcoreclrtraceptprovider.so
 
+# SkiaSharp bundles its own HarfBuzz, which exports the same hb_* symbols as the
+# native libharfbuzz.so.0 that freetype dlopens on the host. Both end up loaded
+# in the same process, so one library frees memory the other allocated and glibc
+# kills the app with 'free(): invalid pointer' while the font cache is built on
+# first run. Ship one HarfBuzz and point SkiaSharp's name at it (mono/SkiaSharp#3038).
+cp "$(readlink -f /usr/lib/libharfbuzz.so.0)" ./nota-publish/libharfbuzz.so.0
+rm -f ./nota-publish/libHarfBuzzSharp.so
+ln -s libharfbuzz.so.0 ./nota-publish/libHarfBuzzSharp.so
+
 mkdir -p ./AppDir/bin
-cp -r ./nota-publish/. ./AppDir/bin
+cp -a ./nota-publish/. ./AppDir/bin
