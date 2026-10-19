@@ -16,6 +16,6 @@ quick-sharun ./AppDir/bin/*
 # Turn AppDir into AppImage
 quick-sharun --make-appimage
 
-# Test the app for 12 seconds, if the test fails due to the app
-# having issues running in the CI use --simple-test instead
-quick-sharun --test ./dist/*.AppImage
+# Nota refuses to start when it cannot open an audio device, which the CI
+# has none of, so only the simple test (missing libs/symbols) is possible
+quick-sharun --simple-test ./dist/*.AppImage
