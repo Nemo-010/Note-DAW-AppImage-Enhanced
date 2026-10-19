@@ -6,24 +6,77 @@ ARCH=$(uname -m)
 
 echo "Installing package dependencies..."
 echo "---------------------------------------------------------------"
-# pacman -Syu --noconfirm PACKAGESHERE
+pacman -Syu --noconfirm \
+	alsa-lib           \
+	aspnet-targeting-pack-10.0 \
+	cmake              \
+	dotnet-sdk-10.0    \
+	git                \
+	libx11             \
+	libxcursor         \
+	libxext            \
+	libxinerama        \
+	libxrandr          \
+	ninja              \
+	nodejs
 
 echo "Installing debloated packages..."
 echo "---------------------------------------------------------------"
 get-debloated-pkgs --add-common --prefer-nano
 
-# Comment this out if you need an AUR package
-#make-aur-package PACKAGENAME
+echo "Building the native engine..."
+echo "---------------------------------------------------------------"
+git clone https://github.com/nota-daw/nota.git ./nota-src && (
+	cd ./nota-src
 
-# If the application needs to be manually built that has to be done down here
+	git fetch --tags origin
+	TAG=$(git tag --sort=-v:refname | grep -vi 'rc\|alpha\|beta\|nightly' | head -1)
+	git checkout "$TAG"
+	echo "${TAG#v}" > ~/version
 
-# if you also have to make nightly releases check for DEVEL_RELEASE = 1
-#
-# if [ "${DEVEL_RELEASE-}" = 1 ]; then
-# 	nightly build steps
-# else
-# 	regular build steps
-# fi
+	git submodule update --init --recursive
 
-# Note that when building manually, you want to output the version of the
-# application to a ~/version file and remove VERSION from make-appimage.sh
+	# The engine is a .so that gets loaded into the AppImage, statically link
+	# libstdc++/libgcc so it doesn't demand the build host's C++ runtime
+	cmake -G Ninja -S src/native/nota.engine -B ./build-native \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+		-DCMAKE_SHARED_LINKER_FLAGS="-static-libstdc++ -static-libgcc" \
+		-DCMAKE_EXE_LINKER_FLAGS="-static-libstdc++ -static-libgcc"
+	cmake --build ./build-native --parallel
+)
+
+echo "Publishing Nota as a self-contained .NET app..."
+echo "---------------------------------------------------------------"
+export DOTNET_CLI_TELEMETRY_OPTOUT=1
+export DOTNET_NOLOGO=1
+
+case "$ARCH" in
+	x86_64)  rid=linux-x64;;
+	aarch64) rid=linux-arm64;;
+	*) echo "Unsupported arch: $ARCH" >&2; exit 1;;
+esac
+
+dotnet publish ./nota-src/src/managed/Nota.App \
+	-c Release                          \
+	-r "$rid"                           \
+	--self-contained true               \
+	"-p:NotaNativeDir=$PWD/nota-src/build-native" \
+	-p:DebugType=none                   \
+	-p:DebugSymbols=false               \
+	-o ./nota-publish
+
+# dlopen'd lazily only when tracing, would drag in liblttng-ust
+rm -f ./nota-publish/libcoreclrtraceptprovider.so
+
+# SkiaSharp bundles its own HarfBuzz, which exports the same hb_* symbols as the
+# native libharfbuzz.so.0 that freetype dlopens on the host. Both end up loaded
+# in the same process, so one library frees memory the other allocated and glibc
+# kills the app with 'free(): invalid pointer' while the font cache is built on
+# first run. Ship one HarfBuzz and point SkiaSharp's name at it (mono/SkiaSharp#3038).
+cp -v /usr/lib/libharfbuzz.so ./nota-publish/libharfbuzz.so.0
+rm -f ./nota-publish/libHarfBuzzSharp.so
+ln -s libharfbuzz.so.0 ./nota-publish/libHarfBuzzSharp.so
+
+mkdir -p ./AppDir/bin
+cp -a ./nota-publish/. ./AppDir/bin
